@@ -22,7 +22,7 @@ var Botkit = require('botkit')
 var controller = Botkit.slackbot({debug: false})
 controller
   .spawn({
-    token: 'xoxb-220101779442-QOVGYbrFBb1NkZFpePmforcm' // Edit this line!
+    token: process.env.BOT_USER_TOKEN // Edit this line!
   })
   .startRTM(function (err) {
     if (err) {
