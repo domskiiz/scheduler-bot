@@ -22,7 +22,7 @@ var Botkit = require('botkit')
 var controller = Botkit.slackbot({debug: false})
 controller
   .spawn({
-    token: 'your-slack-token' // Edit this line!
+    token: 'xoxb-220101779442-QOVGYbrFBb1NkZFpePmforcm' 
   })
   .startRTM(function (err) {
     if (err) {
@@ -33,3 +33,5 @@ controller
 controller.hears(
   ['hello', 'hi'], ['direct_message', 'direct_mention', 'mention'],
   function (bot, message) { bot.reply(message, 'Meow. :smile_cat:') })
+
+  //to
