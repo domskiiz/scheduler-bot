@@ -4,7 +4,7 @@ var RTM_EVENTS = require('@slack/client').RTM_EVENTS;
 var CLIENT_EVENTS = require('@slack/client').CLIENT_EVENTS;
 var botToken = process.env.BOT_USER_TOKEN || '';
 var apiToken = process.env.SLACK_API_TOKEN || '';
-var rtm = new RtmClient(botToken, { logLevel: 'debug' });
+var rtm = new RtmClient(botToken);
 var apiai = require('apiai');
 var app = apiai(process.env.API_AI_TOKEN);
 var web = new WebClient(apiToken);
@@ -12,14 +12,6 @@ var express = require('express');
 var router = express();
 let channel;
 let responseMsg;
-
-// rtm.on(RTM_EVENTS.REACTION_ADDED, function handleRtmReactionAdded(reaction) {
-//   console.log('Reaction added:', reaction);
-// });
-//
-// rtm.on(RTM_EVENTS.REACTION_REMOVED, function handleRtmReactionRemoved(reaction) {
-//   console.log('Reaction removed:', reaction);
-// });
 
 // the client will emit an RTM.AUTHENTICATED event on successful connectoin with the rtm.start payload
 rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, (rtmStartData) => {
@@ -37,66 +29,63 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
     sessionId: '6fd6f06f-c81d-4484-92b3-fe3e2afb3222'
   });
 
-  //     web.chat.postMessage(message.channel, 'Title of the thing', {
-  //       "text": "Would you like to play a game?",
-  //       "attachments": [
-  //           {
-  //               "text": "Choose a game to play",
-  //               "fallback": "You are unable to choose a game",
-  //               "callback_id": "wopr_game",
-  //               "color": "#3AA3E3",
-  //               "attachment_type": "default",
-  //               "actions": [
-  //                   {
-  //                       "name": "game",
-  //                       "text": "Falken's Maze",
-  //                       "type": "button",
-  //                       "value": "maze"
-  //                   },
-  //                   {
-  //                       "name": "game",
-  //                       "text": "Thermonuclear War",
-  //                       "style": "danger",
-  //                       "type": "button",
-  //                       "value": "war",
-  //                       "confirm": {
-  //                           "title": "Are you sure?",
-  //                           "text": "Wouldn't you prefer a good game of chess?",
-  //                           "ok_text": "Yes",
-  //                           "dismiss_text": "No"
-  //                       }
-  //                   }
-  //               ]
-  //           }
-  //       ]
-  //       }, function(err, res) {
-  //           if (err) {
-  //             console.log('Error:', err);
-  //           } else {
-  //             console.log('Message sent: ', res);
-  //           }
-  //     });
+  // request.on('response', function(response) {
+  //     responseMsg = response.result.fulfillment.speech;
+  //     rtm.sendMessage(responseMsg, message.channel);
+  // })
 
   request.on('response', function(response) {
-      responseMsg = response.result.fulfillment.speech;
-      rtm.sendMessage(responseMsg, message.channel);
+      web.chat.postMessage(message.channel, 'Title of the thing', {
+        "text": "Would you like to play a game?",
+        "attachments": [
+            {
+                "text": "Choose a game to play",
+                "fallback": "You are unable to choose a game",
+                "callback_id": "wopr_game",
+                "color": "#3AA3E3",
+                "attachment_type": "default",
+                "actions": [
+                    {
+                        "name": "game",
+                        "text": "Falken's Maze",
+                        "type": "button",
+                        "value": "maze"
+                    },
+                    {
+                        "name": "game",
+                        "text": "Thermonuclear War",
+                        "style": "danger",
+                        "type": "button",
+                        "value": "war",
+                        "confirm": {
+                            "title": "Are you sure?",
+                            "text": "Wouldn't you prefer a good game of chess?",
+                            "ok_text": "Yes",
+                            "dismiss_text": "No"
+                        }
+                    }
+                ]
+            }
+        ]
+        }, function(err, res) {
+            if (err) {
+                console.log('err:', err);
+            } else {
+              console.log('Message sent: ', res);
+            }
+      });
   })
-
-
-
+  console.log('out');
   request.on('error', function(error) {
       console.log(error);
   });
-
   request.end();
+
+
 });
 
+
 rtm.start();
-
-
-// access token: xoxp-219980976195-219436640976-219712353441-a43d29d7fcab8bfcf26799c0639bc897
-// WEB CHAT
-
 
 router.post('/interactive', function(req, res) {
     res.send("hello the API works");
