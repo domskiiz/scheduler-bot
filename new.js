@@ -18,23 +18,14 @@ This is a sample Slack bot built with Botkit.
 */
 var apiai = require('apiai');
 
-var app = apiai('707b02408afd441fa866fbe9811f9862');
-var Botkit = require('botkit')
+var app = apiai(process.env.API_AI_TOKEN);
 
-var controller = Botkit.slackbot({debug: false})
-controller
-  .spawn({
-    token: 'xoxb-220277308804-MkRptlLQKajAPGH91oKPPBtd' // Edit this line!
-  })
-  .startRTM(function (err) {
-    if (err) {
-      throw new Error(err)
-    }
-  })
+// Text Request is where we put the message sent by the user.
 var request = app.textRequest('Remind me to do chore next Friday', {
   sessionId: '6fd6f06f-c81d-4484-92b3-fe3e2afb3222'
 });
 
+// fulfillment.speech is what we get from API.AI and send back to the user.
 request.on('response', function(response) {
     console.log(response.result.fulfillment.speech);
 });
@@ -45,8 +36,5 @@ request.on('error', function(error) {
 
 request.end();
 
-controller.hears(
-  ['hello', 'hi'], ['direct_message', 'direct_mention', 'mention'],
-  function (bot, message) { bot.reply(message, 'Meow. :smile_cat:') })
 
 //to
