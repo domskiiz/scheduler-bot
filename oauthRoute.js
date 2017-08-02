@@ -2,11 +2,15 @@ var express = require('express');
 var google = require('googleapis');
 var OAuth2 = google.auth.OAuth2;
 var calendar = google.calendar('v3');
+var bodyParser = require('body-parser');
+var router = express.Router();
+router.use(bodyParser.urlencoded({ extended: false }));
+router.use(bodyParser.json());
 
-var app = express();
 
-var User = require('./mongoschema').User;
-console.log(User)
+var User = require('./models').User;
+var Task = require('./models').Task;
+var SlackId;
 
 var oauth2Client = new OAuth2(
   process.env.GOOGLE_CLIENT_ID,
@@ -15,8 +19,8 @@ var oauth2Client = new OAuth2(
 );
 
 //renders the consent page
-app.get('/', function(req, res) {
-
+router.get('/connect/', function(req, res) {
+  SlackId = req.query.SlackId;
   var url = oauth2Client.generateAuthUrl({
     access_type: 'offline', //gets us a refresh token
     prompt: 'consent',
@@ -32,69 +36,37 @@ app.get('/', function(req, res) {
   res.redirect(url);
 });
 
-app.get('/auth', function(req, res) {
+router.get('/auth', function(req, res) {
   console.log(req.query.code);
   res.send('success');
   oauth2Client.getToken(req.query.code, function(err, tokens) {
     if (!err) {
+      console.log(req.query.code);
+      console.log(tokens);
       oauth2Client.setCredentials(tokens);
-      var newUser = new User({
+      // var newUser = new User({
+      //   GoogleAccessToken: tokens.access_token,
+      //   GoogleRefreshToken: tokens.refresh_token,
+      //   GooglePprofileId: tokens.id_token,
+      // });
+      
+      console.log(tokens);
+      User.findOneAndUpdate({
+        SlackId: SlackId        
+      }, {$set:{
         GoogleAccessToken: tokens.access_token,
         GoogleRefreshToken: tokens.refresh_token,
         GooglePprofileId: tokens.id_token,
+        GoogleCode: req.query.code
+      }}, function(err,doc) {
+        console.log(doc);
       });
-      newUser.save(function(err) {
-        if(err){
-          console.log(err, 'could not save user');
-        } else {
-          console.log('user saved')
-        }
-      });
-
-      var event = {
-        'summary': 'TESTING',
-        'description': '//TBC',
-        'start': {
-          'date': '2017-08-29',
-          'timeZone': 'America/Los_Angeles',
-        },
-        'end': {
-          'date': '2017-08-29',
-          'timeZone': 'America/Los_Angeles',
-        },
-        'recurrence': [
-        ],
-        'attendees': [
-        ],
-        'reminders': {
-          'useDefault': false,
-          'overrides': [
-          ],
-        },
-      };
-
-      calendar.events.insert({
-        auth: oauth2Client,
-        calendarId: 'primary',
-        resource: event,
-      }, function(err, event) {
-        if (err) {
-          console.log('There was an error contacting the Calendar service: ' + err);
-          return;
-        }
-        console.log('Event created: %s', event.htmlLink);
-      });
-
     }
   })
 
 })
 
-
-
-
-var port = process.env.PORT || 3000;
-app.listen(port);
-console.log('Express started. Listening on port %s', port);
-
-module.exports = app;
+module.exports = {
+  router,
+  oauth2Client: oauth2Client
+}
