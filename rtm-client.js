@@ -26,7 +26,7 @@ let responseMsg;
 
 var oauthRoute = require('./oauthRoute');
 var auth = oauthRoute.router;
-var oauth2Client = oauthRoute.oauth2Client; 
+var oauth2Client = oauthRoute.oauth2Client;
 app.use('/', auth);
 
 let SlackId;
@@ -45,6 +45,17 @@ rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
 
 rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
 
+
+// fulfillment not fulfilled
+// while(response.data.result.actionIncomplete) {
+//     web.chat.postMessage(message.channel, 'Signup: ' + link, {
+//         "text": '',
+//         "username": "PamSpam2",
+//         })
+//     response.data.result.fulfillment.speech
+// }
+
+
     if (message.subtype !== "bot_message"){
         SlackId = message.user;
         models.User.findOne({
@@ -60,7 +71,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                     web.chat.postMessage(message.channel, 'Signup: ' + link, {
                         "text": '',
                         "username": "PamSpam2",
-                        })  
+                        })
                 })
             }
         })
@@ -133,11 +144,6 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                             console.log('Event created: %s', event.htmlLink);
                         });
                         })
-                        
-
-                        
-          
-
                     if (message.subtype !== "bot_message") {
                         web.chat.postMessage(message.channel, confirmation, {
                             "text": "Scheduler Bot",
@@ -147,7 +153,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                                 // console.log(webMessage);
                             })
                     }
-                }) 
+                })
             });
 
         })
