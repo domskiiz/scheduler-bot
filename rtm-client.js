@@ -22,6 +22,9 @@ var path = require('path');
 var axios = require('axios');
 let channel;
 let responseMsg;
+let complete = false;
+let todo = '';
+let date = '';
 
 var oauthRoute = require('./oauthRoute');
 var auth = oauthRoute.router;
@@ -42,7 +45,7 @@ rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
 })
 
 rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
-    if (message.subtype !== "bot_message"){
+    if (message.subtype !== "bot_message" || message.subtype !== "message_changed"){
         SlackId = message.user;
         models.User.findOne({
             SlackId: message.user
@@ -52,8 +55,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                 new models.User({
                     SlackId: message.user
                 }).save(function(err, user){
-                    console.log('in');
-                    var link = 'https://d2cb5b40.ngrok.io' +'/connect?SlackId='+ SlackId;
+                    var link = 'https://dcacfa28.ngrok.io' +'/connect?SlackId='+ SlackId;
                     web.chat.postMessage(message.channel, 'Signup: ' + link, {
                         "text": '',
                         "username": "PamSpam2",
@@ -62,7 +64,9 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
             }
         })
     }
-    if(message.text.split(' ')[0] === 'Remind' ||  message.text.split(' ')[0] === 'Schedule'){
+
+    if(!complete && message.subtype !== "bot_message"){
+        console.log('message', message.text);
         axios({
             method: 'post',
             url: 'https://api.api.ai/v1/query?v=20150910',
@@ -77,111 +81,119 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
             },
         })
         .then((response) => {
-            console.log(response.data.result.fulfillment);
-            console.log(response.data.result);
             var result = response.data.result
-            if (result.actionIncomplete) {
-                console.log(result.fulfillment.messages)
-            }
-            models.User.find({
-                SlackId: message.user
-            })
-            .then(function(user){
-                var parameters = response.data.result.parameters;
-                var todo =  parameters.todo;
-                var date = parameters.date;
-                var confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' has been added to your calendar!';
-                new models.Task({
-                    subject: todo,
-                    day: date,
-                    requesterId: user._id,
-                }).save(function(err, task){
-                    console.log('in');
-                    console.log(user[0]);
-                        oauth2Client.setCredentials({
-                                access_token: user[0].GoogleAccessToken,
-                                refresh_token:  user[0].GoogleRefreshToken,
-                            });
-                        oauth2Client.refreshAccessToken(function(err, tokens) {
-                            console.log(tokens);
-                            oauth2Client.setCredentials({
-                                access_token: tokens.access_token,
-                                refresh_token: tokens.refresh_token,
-                            });
-                            var event = {
-                            'summary': 'Test todo',
-                            'description': '//TBC',
-                            'start': {
-                            'date': '2017-08-29',
-                            'timeZone': 'America/Los_Angeles',
-                            },
-                            'end': {
-                            'date': '2017-08-29',
-                            'timeZone': 'America/Los_Angeles',
-                            },
-                            'recurrence': [
-                            ],
-                            'attendees': [
-                            ],
-                            'reminders': {
-                            'useDefault': false,
-                            'overrides': [
-                            ],
-                            },
-                        };
-                        calendar.events.insert({
-                            auth: oauth2Client,
-                            calendarId: 'primary',
-                            resource: event,
-                        }, function(err, event) {
-                            if (err) {
-                            console.log('There was an error contacting the Calendar service: ' + err);
-                            return;
-                            }
-                            console.log('Event created: %s', event.htmlLink);
-                        });
-                        })
-
-                    if (message.subtype !== "bot_message") {
-                        web.chat.postMessage(message.channel, confirmation, {
-                            "text": "Scheduler Bot",
-                            "username": "PamSpam2",
-                            })
-                            .then((webMessage) => {
-                                // console.log(webMessage);
-                            })
-                    }
+            console.log('result', result);
+            if (Object.keys(result.parameters).length === 0 && !result.actionIncomplete && (message.text.split(' ')[0].toUpperCase() !== 'REMIND' || message.text.split(' ')[0].toUpperCase() !== 'SCHEDULE' )) {
+                console.log("am i in here?");
+                console.log('length',Object.keys(result.parameters).length);
+                web.chat.postMessage(message.channel, result.fulfillment.speech, {
+                    "text": "Scheduler Bot",
+                    "username": "PamSpam2",
                 })
-            });
-
+            }
+            else if (result.actionIncomplete) {
+                complete = false;
+                web.chat.postMessage(message.channel, result.fulfillment.speech, {
+                    "text": "Scheduler Bot",
+                    "username": "PamSpam2",
+                })
+            } else {
+                todo = result.parameters.todo;
+                date = result.parameters.date;
+                complete = true;
+                models.User.find({
+                    SlackId: message.user
+                })
+                .then(function(user){
+                    web.chat.postMessage(message.channel, "Confirmation", {
+                        "text": "Are you sure about your choice?",
+                        "username": "PamSpam2",
+                        "attachments": [{
+                            "text": "Should we schedule your todo " + todo + " for " + date + " ?",
+                            "callback_id": "confirmation",
+                            "color": "#3AA3E3",
+                            "attachment_type": "default",
+                            "actions": [
+                                {
+                                    "name": "confirmation",
+                                    "text": "Yes, confirm!",
+                                    "type": "button",
+                                    "value": "confirm"
+                                },
+                                {
+                                    "name": "confirmation",
+                                    "text": "Cancel",
+                                    "style": "danger",
+                                    "type": "button",
+                                    "value": "cancel"
+                                }
+                            ]
+                        }]
+                    })
+                    new models.Task({
+                        subject: todo,
+                        day: date,
+                        requesterId: user._id,
+                    }).save(function(err, task){
+                            oauth2Client.setCredentials({
+                                    access_token: user[0].GoogleAccessToken,
+                                    refresh_token:  user[0].GoogleRefreshToken,
+                                });
+                            oauth2Client.refreshAccessToken(function(err, tokens) {
+                                oauth2Client.setCredentials({
+                                    access_token: tokens.access_token,
+                                    refresh_token: tokens.refresh_token,
+                                });
+                        })
+                    })
+                });
+            }
         })
-}
+    }
 });
-
-// router.post('/interactive', (req, res) => {
-//     var payload = JSON.parse(req.body.payload)
-//     console.log('Payload', payload);
-//     if (payload.actions[0].value === "schedule") {
-//         res.send("Cool. We'll schedule something soon.")
-//     } else if (payload.actions[0].value === "cancel") {
-//         res.send("Allrighty. Scheduling cancelled.")
-//     }
-// });
-
-// router.listen(8080, function() {
-//     console.log('PamSpam2 listening on port 8080.');
-// });
 
 rtm.start();
 
-
 app.post('/interactive', (req, res) => {
     var payload = JSON.parse(req.body.payload)
-    console.log('Payload', payload);
-    if (payload.actions[0].value === "schedule") {
-        res.send("Cool. We'll schedule something soon.")
+    complete = false;
+    if (payload.actions[0].value === "confirm") {
+        var event = {
+            'summary': todo,
+            'description': '//TBC',
+            'start': {
+            'date': date,
+            'timeZone': 'America/Los_Angeles',
+            },
+            'end': {
+            'date': date,
+            'timeZone': 'America/Los_Angeles',
+            },
+            'recurrence': [
+            ],
+            'attendees': [
+            ],
+            'reminders': {
+            'useDefault': false,
+            'overrides': [
+            ],
+            },
+        };
+        calendar.events.insert({
+            auth: oauth2Client,
+            calendarId: 'primary',
+            resource: event,
+        }, function(err, event) {
+            if (err) {
+            console.log('There was an error contacting the Calendar service: ' + err);
+            return;
+            }
+            console.log('Event created: %s', event.htmlLink);
+        });
+        var confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' has been added to your calendar!';
+        res.send(confirmation)
     } else if (payload.actions[0].value === "cancel") {
-        res.send("Allrighty. Scheduling cancelled.")
+        res.send("Sure. Scheduling cancelled.")
     }
 });
 
