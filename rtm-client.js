@@ -14,9 +14,6 @@ var express = require('express');
 var app = express();
 var request = require('request');
 var models = require('./models');
-var google = require('googleapis');
-var calendar = google.calendar('v3');
-var OAuth2 = google.auth.OAuth2;
 
 var path = require('path');
 var axios = require('axios');
@@ -28,7 +25,11 @@ let date = '';
 
 var oauthRoute = require('./oauthRoute');
 var auth = oauthRoute.router;
-var oauth2Client = oauthRoute.oauth2Client;
+
+var saveMeeting = require('./saveEvents/saveMeeting');
+var saveTodo = require('./saveEvents/saveTodo');
+var updateAccessTokens = require('./saveEvents/updateAccessTokens');
+
 app.use('/', auth);
 
 let SlackId;
@@ -135,16 +136,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                         day: date,
                         requesterId: user._id,
                     }).save(function(err, task){
-                            oauth2Client.setCredentials({
-                                    access_token: user[0].GoogleAccessToken,
-                                    refresh_token:  user[0].GoogleRefreshToken,
-                                });
-                            oauth2Client.refreshAccessToken(function(err, tokens) {
-                                oauth2Client.setCredentials({
-                                    access_token: tokens.access_token,
-                                    refresh_token: tokens.refresh_token,
-                                });
-                        })
+                        updateAccessTokens(user);
                     })
                 });
             }
@@ -158,38 +150,7 @@ app.post('/interactive', (req, res) => {
     var payload = JSON.parse(req.body.payload)
     complete = false;
     if (payload.actions[0].value === "confirm") {
-        var event = {
-            'summary': todo,
-            'description': '//TBC',
-            'start': {
-            'date': date,
-            'timeZone': 'America/Los_Angeles',
-            },
-            'end': {
-            'date': date,
-            'timeZone': 'America/Los_Angeles',
-            },
-            'recurrence': [
-            ],
-            'attendees': [
-            ],
-            'reminders': {
-            'useDefault': false,
-            'overrides': [
-            ],
-            },
-        };
-        calendar.events.insert({
-            auth: oauth2Client,
-            calendarId: 'primary',
-            resource: event,
-        }, function(err, event) {
-            if (err) {
-            console.log('There was an error contacting the Calendar service: ' + err);
-            return;
-            }
-            console.log('Event created: %s', event.htmlLink);
-        });
+        saveTodo(todo, date);
         var confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' has been added to your calendar!';
         res.send(confirmation)
     } else if (payload.actions[0].value === "cancel") {
