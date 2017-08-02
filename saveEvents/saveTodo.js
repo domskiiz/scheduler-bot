@@ -23,7 +23,7 @@ saveTodo = function(task, date) {
       console.log('Event created: %s', event.htmlLink);
       }
     );
-  });
-}
+  };
+
 
 module.exports = saveTodo;

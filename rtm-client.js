@@ -23,6 +23,8 @@ let complete = false;
 let notPressed;
 let todo = '';
 let date = '';
+const remindIntentId = '59efd0cc-6ec7-4539-b05b-86626f6cfe2a';
+const scheduleIntentId = '2fac8e45-db14-496c-a23d-4f2f14b1d876';
 
 var oauthRoute = require('./oauthRoute');
 var auth = oauthRoute.router;
@@ -47,8 +49,6 @@ rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
 })
 
 rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
-    console.log('message', message);
-
     if (notPressed && message.subtype !== "bot_message") {
         web.chat.postMessage(message.channel, "Please confirm before proceeding.", {
             "text": "Scheduler Bot",
@@ -92,6 +92,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
         })
         .then((response) => {
             var result = response.data.result
+            console.log(result);
             if (Object.keys(result.parameters).length === 0 && !result.actionIncomplete && (message.text.split(' ')[0].toUpperCase() !== 'REMIND' || message.text.split(' ')[0].toUpperCase() !== 'SCHEDULE' )) {
                 web.chat.postMessage(message.channel, result.fulfillment.speech, {
                     "text": "Scheduler Bot",
