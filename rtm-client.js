@@ -52,7 +52,6 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                 new models.User({
                     SlackId: message.user
                 }).save(function(err, user){
-                    console.log('in');
                     var link = 'https://d2cb5b40.ngrok.io' +'/connect?SlackId='+ SlackId;
                     web.chat.postMessage(message.channel, 'Signup: ' + link, {
                         "text": '',
@@ -96,14 +95,11 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                     day: date,
                     requesterId: user._id,
                 }).save(function(err, task){
-                    console.log('in');
-                    console.log(user[0]);
                         oauth2Client.setCredentials({
                                 access_token: user[0].GoogleAccessToken,
                                 refresh_token:  user[0].GoogleRefreshToken,
                             });
                         oauth2Client.refreshAccessToken(function(err, tokens) {
-                            console.log(tokens);
                             oauth2Client.setCredentials({
                                 access_token: tokens.access_token,
                                 refresh_token: tokens.refresh_token,

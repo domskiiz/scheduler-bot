@@ -1,17 +1,21 @@
 var express = require('express');
+var bodyParser = require('body-parser');
+
 var google = require('googleapis');
 var OAuth2 = google.auth.OAuth2;
 var calendar = google.calendar('v3');
-var bodyParser = require('body-parser');
+
 var router = express.Router();
+
 router.use(bodyParser.urlencoded({ extended: false }));
 router.use(bodyParser.json());
 
-
 var User = require('./models').User;
 var Task = require('./models').Task;
+
 var SlackId;
 
+// connect to our credentials
 var oauth2Client = new OAuth2(
   process.env.GOOGLE_CLIENT_ID,
   process.env.GOOGLE_CLIENT_SECRET,
@@ -32,25 +36,16 @@ router.get('/connect/', function(req, res) {
       auth_id: req.query.auth_id
     }))
   });
-
   res.redirect(url);
 });
 
+// upon success, save tokens in database
 router.get('/auth', function(req, res) {
   console.log(req.query.code);
   res.send('success');
   oauth2Client.getToken(req.query.code, function(err, tokens) {
     if (!err) {
-      console.log(req.query.code);
-      console.log(tokens);
       oauth2Client.setCredentials(tokens);
-      // var newUser = new User({
-      //   GoogleAccessToken: tokens.access_token,
-      //   GoogleRefreshToken: tokens.refresh_token,
-      //   GooglePprofileId: tokens.id_token,
-      // });
-
-      console.log(tokens);
       User.findOneAndUpdate({
         SlackId: SlackId
       }, {$set:{
@@ -63,7 +58,6 @@ router.get('/auth', function(req, res) {
       });
     }
   })
-
 })
 
 module.exports = {
