@@ -21,8 +21,11 @@ let channel;
 let responseMsg;
 let complete = false;
 let notPressed;
+let allDayTask;
 let todo = '';
 let date = '';
+let time = '';
+person = [];
 const remindIntentId = '59efd0cc-6ec7-4539-b05b-86626f6cfe2a';
 const scheduleIntentId = '2fac8e45-db14-496c-a23d-4f2f14b1d876';
 
@@ -108,17 +111,27 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
             } else {
                 todo = result.parameters.todo;
                 date = result.parameters.date;
+                if (result.metadata.intentId === scheduleIntentId) {
+                    time = result.parameters.time;
+                    attendees = result.parameters.person;
+                }
                 complete = true;
                 models.User.find({
                     SlackId: message.user
                 })
                 .then(function(user){
                     notPressed = true;
+                    var confirmText = '';
+                    if (result.metadata.intentId === remindIntentId) {
+                        confirmText = "Should we schedule your todo " + todo + " for " + date + " ?";
+                    } else if (result.metadata.intentId === scheduleIntentId) {
+                        confirmText = "Should we schedule your todo " + todo + " on " + time + " for " + date + " ?";
+                    }
                     web.chat.postMessage(message.channel, "Confirmation", {
                         "text": "Are you sure about your choice?",
                         "username": "PamSpam2",
                         "attachments": [{
-                            "text": "Should we schedule your todo " + todo + " for " + date + " ?",
+                            "text": confirmText,
                             "callback_id": "confirmation",
                             "color": "#3AA3E3",
                             "attachment_type": "default",
@@ -139,19 +152,33 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                             ]
                         }]
                     })
-                    new models.Task({
-                        subject: todo,
-                        day: date,
-                        requesterId: user._id,
-                    }).save(function(err, task){
-                        updateAccessTokens(user);
-                    })
+                    if (result.metadata.intentId === remindIntentId) {
+                        allDayTask = true;
+                        new models.Task({
+                            subject: todo,
+                            day: date,
+                            requesterId: user._id,
+                        }).save(function(err, task){
+                            updateAccessTokens(user);
+                        })
+                    } else if (result.metadata.intentId === scheduleIntentId) {
+                        allDayTask = false;
+                        new models.Meeting({
+                            subject: todo,
+                            day: date,
+                            time: time,
+                            invitees: attendees,
+                            requesterId: user._id,
+                        }).save(function(err, task){
+                            console.log('here')
+                            updateAccessTokens(user);
+                        })
+                    }
                 });
             }
         })
     }
 });
-
 
 rtm.start();
 
@@ -160,8 +187,14 @@ app.post('/interactive', (req, res) => {
     complete = false;
     notPressed = false;
     if (payload.actions[0].value === "confirm") {
-        saveTodo(todo, date);
-        var confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' has been added to your calendar!';
+        var confirmation = '';
+        if (!allDayTask) {
+            saveTodo(todo, date);
+            confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' has been added to your calendar!'
+        } else {
+            saveMeeting(todo, date, time, attendees);
+            confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' for ' + time + ' has been added to your calendar!'
+        }
         res.send(confirmation)
     } else if (payload.actions[0].value === "cancel") {
         res.send("Sure. Scheduling cancelled.")

@@ -20,8 +20,8 @@ saveTodo = function(task, date) {
         console.log('There was an error contacting the Calendar service: ' + err);
         return;
       }
-    );
-  };
+  });
+}
 
 
 module.exports = saveTodo;
