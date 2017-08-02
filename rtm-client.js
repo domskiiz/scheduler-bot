@@ -20,6 +20,7 @@ var axios = require('axios');
 let channel;
 let responseMsg;
 let complete = false;
+let notPressed;
 let todo = '';
 let date = '';
 
@@ -46,6 +47,15 @@ rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
 })
 
 rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
+    console.log('message', message);
+
+    if (notPressed && message.subtype !== "bot_message") {
+        web.chat.postMessage(message.channel, "Please confirm before proceeding.", {
+            "text": "Scheduler Bot",
+            "username": "PamSpam2",
+        })
+    }
+
     if (message.subtype !== "bot_message" || message.subtype !== "message_changed"){
         SlackId = message.user;
         models.User.findOne({
@@ -67,7 +77,6 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
     }
 
     if(!complete && message.subtype !== "bot_message"){
-        console.log('message', message.text);
         axios({
             method: 'post',
             url: 'https://api.api.ai/v1/query?v=20150910',
@@ -83,10 +92,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
         })
         .then((response) => {
             var result = response.data.result
-            console.log('result', result);
             if (Object.keys(result.parameters).length === 0 && !result.actionIncomplete && (message.text.split(' ')[0].toUpperCase() !== 'REMIND' || message.text.split(' ')[0].toUpperCase() !== 'SCHEDULE' )) {
-                console.log("am i in here?");
-                console.log('length',Object.keys(result.parameters).length);
                 web.chat.postMessage(message.channel, result.fulfillment.speech, {
                     "text": "Scheduler Bot",
                     "username": "PamSpam2",
@@ -106,6 +112,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                     SlackId: message.user
                 })
                 .then(function(user){
+                    notPressed = true;
                     web.chat.postMessage(message.channel, "Confirmation", {
                         "text": "Are you sure about your choice?",
                         "username": "PamSpam2",
@@ -144,11 +151,13 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
     }
 });
 
+
 rtm.start();
 
 app.post('/interactive', (req, res) => {
     var payload = JSON.parse(req.body.payload)
     complete = false;
+    notPressed = false;
     if (payload.actions[0].value === "confirm") {
         saveTodo(todo, date);
         var confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' has been added to your calendar!';
