@@ -18,7 +18,6 @@ var google = require('googleapis');
 var calendar = google.calendar('v3');
 var OAuth2 = google.auth.OAuth2;
 
-
 var path = require('path');
 var axios = require('axios');
 let channel;
@@ -30,7 +29,6 @@ var oauth2Client = oauthRoute.oauth2Client;
 app.use('/', auth);
 
 let SlackId;
-
 
 // the client will emit an RTM.AUTHENTICATED event on successful connectoin with the rtm.start payload
 rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, (rtmStartData) => {
@@ -44,7 +42,6 @@ rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
 })
 
 rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
-
     if (message.subtype !== "bot_message"){
         SlackId = message.user;
         models.User.findOne({
@@ -80,6 +77,12 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
             },
         })
         .then((response) => {
+            console.log(response.data.result.fulfillment);
+            console.log(response.data.result);
+            var result = response.data.result
+            if (result.actionIncomplete) {
+                console.log(result.fulfillment.messages)
+            }
             models.User.find({
                 SlackId: message.user
             })
@@ -93,8 +96,9 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                     day: date,
                     requesterId: user._id,
                 }).save(function(err, task){
-                    console.log(user);
-                        oauth2Client.refreshAccessToken(function(err, tokens) {
+                    console.log('in');
+                        oauth2Client.getToken(user.GoogleCode, function(err, tokens) {
+                            console.log(tokens);
                             oauth2Client.setCredentials({
                                 access_token: tokens.access_token,
                                 refresh_token: tokens.refresh_token,
@@ -134,10 +138,6 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                         });
                         })
                         
-
-                        
-          
-
                     if (message.subtype !== "bot_message") {
                         web.chat.postMessage(message.channel, confirmation, {
                             "text": "Scheduler Bot",
