@@ -69,7 +69,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                 new models.User({
                     SlackId: message.user
                 }).save(function(err, user){
-                    var link = 'https://dcacfa28.ngrok.io' +'/connect?SlackId='+ SlackId;
+                    var link = 'http://903bcb80.ngrok.io' +'/connect?SlackId='+ SlackId;
                     web.chat.postMessage(message.channel, 'Signup: ' + link, {
                         "text": '',
                         "username": "PamSpam2",
