@@ -1,4 +1,4 @@
-var models = require('./models');
+var models = require('../models');
 
 getAttendeeEmails = function(slackAttendees) {
   var attendeeEmails = [];

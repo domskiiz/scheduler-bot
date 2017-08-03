@@ -17,6 +17,7 @@ var models = require('./models');
 
 var availableTimeSlot = require('./calendarLogic/timeconflict');
 var getAttendeeEmails = require('./calendarLogic/attendees');
+var cronjob = require('./cronjob')
 
 var path = require('path');
 var axios = require('axios');
@@ -54,6 +55,7 @@ rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, (rtmStartData) => {
 
 rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     console.log('Pam Spam is authenticated.')
+    // cronjob()
 })
 
 rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
