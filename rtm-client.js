@@ -14,7 +14,9 @@ var express = require('express');
 var app = express();
 var request = require('request');
 var models = require('./models');
-var availableTimeSlot = require('./calendarLogic/timeconflict')
+
+var availableTimeSlot = require('./calendarLogic/timeconflict');
+var getAttendeeEmails = require('./calendarLogic/attendees');
 
 var path = require('path');
 var axios = require('axios');
@@ -27,6 +29,8 @@ let todo = '';
 let date = '';
 let time = '';
 person = [];
+let attendeeEmails = [];
+
 const remindIntentId = '59efd0cc-6ec7-4539-b05b-86626f6cfe2a';
 const scheduleIntentId = '2fac8e45-db14-496c-a23d-4f2f14b1d876';
 
@@ -141,6 +145,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                         confirmText = "Should we schedule your todo " + todo + " for " + date + " ?";
                     } else if (result.metadata.intentId === scheduleIntentId) {
                         var available = availableTimeSlot(attendees);
+                        attendeeEmails = getAttendeeEmails(attendees);
                         console.log("available", available);
                         console.log("attendees", attendees);
                         confirmText = "Should we schedule your todo " + todo + " on " + time + " for " + date + " ?";
@@ -185,7 +190,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                             subject: todo,
                             day: date,
                             time: time,
-                            // invitees: attendees,
+                            invitees: attendeeEmails,
                             requesterId: user._id,
                         }).save(function(err, task){
                             console.log('meeting saves it here')
@@ -210,7 +215,7 @@ app.post('/interactive', (req, res) => {
             saveTodo(todo, date);
             confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' has been added to your calendar!'
         } else {
-            saveMeeting(todo, date, time, attendees);
+            saveMeeting(todo, date, time, attendeeEmails);
             confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' for ' + time + ' has been added to your calendar!'
         }
         res.send(confirmation)
