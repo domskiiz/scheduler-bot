@@ -188,7 +188,7 @@ app.post('/interactive', (req, res) => {
     notPressed = false;
     if (payload.actions[0].value === "confirm") {
         var confirmation = '';
-        if (!allDayTask) {
+        if (allDayTask) {
             saveTodo(todo, date);
             confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' has been added to your calendar!'
         } else {
