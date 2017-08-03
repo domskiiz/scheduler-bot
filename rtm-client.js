@@ -20,6 +20,7 @@ var getAttendeeEmails = require('./calendarLogic/attendees');
 var cronjob = require('./cronjob')
 
 var allGrantedAccess = require('./calendarLogic/allGrantedAccess');
+let handleNotGranted;
 
 var path = require('path');
 var axios = require('axios');
@@ -57,7 +58,7 @@ rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, (rtmStartData) => {
 
 rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     console.log('Pam Spam is authenticated.')
-    cronjob()
+    // cronjob()
 })
 
 rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
@@ -139,11 +140,10 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                     attendees = result.parameters.person;
                 }
                 complete = true;
-                models.User.findOne({
+                models.User.find({
                     SlackId: message.user
                 })
                 .then(function(user){
-                    console.log('user and their id', user._id);
                     notPressed = true;
                     var confirmText = '';
                     if (result.metadata.intentId === remindIntentId) {
@@ -151,6 +151,8 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                     } else if (result.metadata.intentId === scheduleIntentId) {
                         var available = availableTimeSlot(attendees);
                         attendeeEmails = getAttendeeEmails(attendees);
+                        console.log("available", available);
+                        console.log("attendees", attendees);
                         confirmText = "Should we schedule your todo " + todo + " on " + time + " for " + date + " ?";
                     }
                     web.chat.postMessage(message.channel, "Confirmation", {
@@ -222,6 +224,7 @@ app.post('/interactive', (req, res) => {
             var noPermission = allGrantedAccess(attendees);
             if (noPermission.length > 0) {
               res.send("Not all attendees have granted access yet.");
+              handleNotGranted = true;
             } else {
               saveMeeting(todo, date, time, attendeeEmails);
               confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' for ' + time + ' has been added to your calendar!'
