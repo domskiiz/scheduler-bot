@@ -57,10 +57,10 @@ var Meetingschema = schema({
         type: String,
         required: true
     },
-    invitees:{
-        type: mongoose.Schema.Types.ObjectId,
-        ref: User
-    },
+    // invitees:{
+    //     type: mongoose.Schema.Types.ObjectId,
+    //     ref: User
+    // },
     subject:{
         type: String
     },

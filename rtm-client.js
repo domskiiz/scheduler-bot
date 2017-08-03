@@ -14,6 +14,7 @@ var express = require('express');
 var app = express();
 var request = require('request');
 var models = require('./models');
+var availableTimeSlot = require('./calendarLogic/timeconflict')
 
 var path = require('path');
 var axios = require('axios');
@@ -69,7 +70,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                 new models.User({
                     SlackId: message.user
                 }).save(function(err, user){
-                    var link = 'http://903bcb80.ngrok.io' +'/connect?SlackId='+ SlackId;
+                    var link = 'https://597a56cd.ngrok.io' +'/connect?SlackId='+ SlackId;
                     web.chat.postMessage(message.channel, 'Signup: ' + link, {
                         "text": '',
                         "username": "PamSpam2",
@@ -80,6 +81,20 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
     }
 
     if(!complete && message.subtype !== "bot_message"){
+        console.log(message.text);
+        var array = message.text.split(' ');
+        console.log(array);
+        array.forEach(function(item, index){
+            if(item[0]==='<'){
+                var unfiltered = item.split('').splice(2);
+                unfiltered.pop()
+                unfiltered = unfiltered.join('')
+                array[index] = unfiltered;
+            };
+        })
+        var text = array.join(' ');
+        console.log('array', array);
+        console.log('text', text);
         axios({
             method: 'post',
             url: 'https://api.api.ai/v1/query?v=20150910',
@@ -88,7 +103,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                 'Content-Type': 'application/json; charset=utf-8'
             },
             data: {
-                query: message.text,
+                query: text,
                 lang: "en",
                 sessionId: '6fd6f06f-c81d-4484-92b3-fe3e2afb3222',
             },
@@ -125,6 +140,9 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                     if (result.metadata.intentId === remindIntentId) {
                         confirmText = "Should we schedule your todo " + todo + " for " + date + " ?";
                     } else if (result.metadata.intentId === scheduleIntentId) {
+                        var available = availableTimeSlot(attendees);
+                        console.log("available", available);
+                        console.log("attendees", attendees);
                         confirmText = "Should we schedule your todo " + todo + " on " + time + " for " + date + " ?";
                     }
                     web.chat.postMessage(message.channel, "Confirmation", {
@@ -167,10 +185,10 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                             subject: todo,
                             day: date,
                             time: time,
-                            invitees: attendees,
+                            // invitees: attendees,
                             requesterId: user._id,
                         }).save(function(err, task){
-                            console.log('here')
+                            console.log('meeting saves it here')
                             updateAccessTokens(user);
                         })
                     }
