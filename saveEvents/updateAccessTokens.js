@@ -8,8 +8,8 @@ var oauth2Client = oauthRoute.oauth2Client;
 updateAccessTokens = function(user) {
   oauth2Client.setCredentials(
     {
-      access_token: user[0].GoogleAccessToken,
-      refresh_token:  user[0].GoogleRefreshToken,
+      access_token: user.GoogleAccessToken,
+      refresh_token:  user.GoogleRefreshToken,
     }
   );
   oauth2Client.refreshAccessToken(function(err, tokens) {
