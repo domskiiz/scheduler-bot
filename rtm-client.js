@@ -19,6 +19,8 @@ var availableTimeSlot = require('./calendarLogic/timeconflict');
 var getAttendeeEmails = require('./calendarLogic/attendees');
 var cronjob = require('./cronjob')
 
+var allGrantedAccess = require('./calendarLogic/allGrantedAccess');
+
 var path = require('path');
 var axios = require('axios');
 let channel;
@@ -216,8 +218,14 @@ app.post('/interactive', (req, res) => {
             saveTodo(todo, date);
             confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' has been added to your calendar!'
         } else {
-            saveMeeting(todo, date, time, attendeeEmails);
-            confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' for ' + time + ' has been added to your calendar!'
+            // check that all have enabled gcal access
+            var noPermission = allGrantedAccess(attendees);
+            if (noPermission.length > 0) {
+              res.send("Not all attendees have granted access yet.");
+            } else {
+              saveMeeting(todo, date, time, attendeeEmails);
+              confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' for ' + time + ' has been added to your calendar!'
+            }
         }
         res.send(confirmation)
     } else if (payload.actions[0].value === "cancel") {
