@@ -26,12 +26,16 @@ var models = require('../models');
 // }
 
 function CheckConflicts(events, time) {
+	var check = false;
+	console.log(events);
 	events.forEach(function(item) {
+		console.log(item);
 		if (new Date(item.start.dateTime) < time && time < new Date(item.end.dateTime)) {
-			return true;
+			check = true;
+			console.log('check')
 		}
 	})
-	return false;
+	return check;
 }
 
 // var message = message.text;
@@ -42,7 +46,6 @@ function returnAvailableSlots(attendees) {
 	// var message = messageText;
 	var time = new Date(); //must set ==> Date object
 	var ids = attendees;
-	var availableTimeSlot = [];
 	models.User.find({
 		SlackId: { $in: ids}
 	})
@@ -52,10 +55,10 @@ function returnAvailableSlots(attendees) {
 		}));
 	})
 	.then(function(allevents){
-		console.log("allevents", allevents);
 		var conflicts = false;
+	    var availableTimeSlot = [];
 		while(availableTimeSlot.length < 10){
-			if(CheckConflicts(allevents, time)){
+			if(CheckConflicts(allevents[0], time)){
 				time.setMinutes(time.getMinutes() + 30);
 			}else{
 				if(availableTimeSlot.length%3 === 0){
@@ -64,10 +67,13 @@ function returnAvailableSlots(attendees) {
 					availableTimeSlot.push(time);
 				}
 			}
+			console.log('in');
+			console.log(availableTimeSlot);
 		}
 		//
 
 	});
+
 
 	return availableTimeSlot;
 }
