@@ -37,9 +37,9 @@ function CheckConflicts(events, time) {
 // var time = new Date(); //must set ==> Date object
 // var ids = ManipulateIds(message);
 
-function returnAvailableSlots(attendees) {
+function returnAvailableSlots(attendees, time) {
 	// var message = messageText;
-	var time = new Date(); //must set ==> Date object
+	var time = time; //must set ==> Date object
 	var ids = attendees;
 	var availableTimeSlot = [];
 	models.User.find({
@@ -134,4 +134,5 @@ function addEventList(user) {
 
 	})
 }
-returnAvailableSlots(['U6FBRUN2U', 'U6FGCL7K3'])
+// returnAvailableSlots(['U6FBRUN2U', 'U6FGCL7K3'])
+module.exports = returnAvailableSlots;
