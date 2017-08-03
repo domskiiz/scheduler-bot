@@ -1,15 +1,17 @@
 var models = require('./models');
 
-filterUsernames = function(slackUsernames) {
-  var usernames = slackUsernames.map(function(user) {
-    return user.slice(2);
+getAttendeeEmails = function(slackAttendees) {
+  var attendeeEmails = [];
+  slackAttendees.forEach(function(slackId) {
+    models.User.findOne({
+      SlackId: slackId
+    })
+    .then(function(user) {
+      attendeeEmails.push(user.SlackEmail);
+    });
   });
-  return usernames;
+
+  return attendeeEmails;
 }
 
-getGoogleEmails = function(slackAttendees) {
-  var usernames = filterUsernames(slackAttendees)
-  models.User.
-
-
-}
+module.exports = getAttendeeEmails;
