@@ -1,4 +1,4 @@
-var models = require('../../models');
+var models = require('../models');
 
 function allGrantedAccess(attendees) {
   var noPermission = [];
