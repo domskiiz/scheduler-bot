@@ -36,12 +36,25 @@ function CheckConflicts(events, time) {
 // var message = message.text;
 // var time = new Date(); //must set ==> Date object
 // var ids = ManipulateIds(message);
+function combineDateWithTime(d, t)
+{
+   return new Date(
+    d.getFullYear(),
+    d.getMonth(),
+    d.getDate(),
+    t.getHours(),
+    t.getMinutes(),
+    t.getSeconds(),
+    t.getMilliseconds()
+    );
+}
 
 function returnAvailableSlots(attendees, time) {
 	// var message = messageText;
 	var time = time; //must set ==> Date object
 	var ids = attendees;
 	var availableTimeSlot = [];
+	return new Promise(function(resolve, reject){
 	models.User.find({
 		SlackId: { $in: ids}
 	})
@@ -66,17 +79,15 @@ function returnAvailableSlots(attendees, time) {
                         availableTimeSlot.push(time);
                     }
 				}else{
-                    console.log('in')
 					availableTimeSlot.push(time);
 				}
 			}
 		}
         //
-        console.log(availableTimeSlot)
-
+		resolve(availableTimeSlot);
 	});
+	})
 
-	return availableTimeSlot;
 }
 
 function addEventList(user) {
@@ -134,5 +145,4 @@ function addEventList(user) {
 
 	})
 }
-// returnAvailableSlots(['U6FBRUN2U', 'U6FGCL7K3'])
 module.exports = returnAvailableSlots;
