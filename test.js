@@ -70,6 +70,7 @@ function returnAvailableSlots(attendees, time) {
             console.log('in')
 			if(CheckConflicts(allevents, time2)){
 				var time2 = new Date(time.setMinutes(time.getMinutes() + 30));
+
 			}else{
 				if(availableTimeSlot.times.length%3 === 0 && availableTimeSlot.times.length !== 0 && availableTimeSlot.check===false){
 					availableTimeSlot.check=true;
@@ -122,12 +123,10 @@ function addEventList(user) {
 				return;
 			}
 
-			console.log('tokens', tokens);
 			oauth2Client.setCredentials({
 				access_token: tokens.access_token,
 				refresh_token: tokens.refresh_token,
 			});
-			console.log(oauth2Client);
 			calendar.events.list({
 				auth: oauth2Client,
 				calendarId: 'primary',
@@ -136,7 +135,6 @@ function addEventList(user) {
 				singleEvents: true,
 				orderBy: 'startTime'
 			}, function(err, response) {
-				console.log('inside callback');
 				if (err) {
 					console.log('The API returned an error: ' + err);
 					reject('The API returned an error: ' + err);

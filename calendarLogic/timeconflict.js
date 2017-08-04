@@ -27,12 +27,9 @@ var models = require('../models');
 
 function CheckConflicts(events, time) {
 	var check = false;
-	console.log(events);
 	events.forEach(function(item) {
-		console.log(item);
 		if (new Date(item.start.dateTime) < time && time < new Date(item.end.dateTime)) {
 			check = true;
-			console.log('check')
 		}
 	})
 	return check;
@@ -67,11 +64,7 @@ function returnAvailableSlots(attendees) {
 					availableTimeSlot.push(time);
 				}
 			}
-			console.log('in');
-			console.log(availableTimeSlot);
 		}
-		//
-
 	});
 
 

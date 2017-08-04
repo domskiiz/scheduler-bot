@@ -9,6 +9,7 @@ function allGrantedAccess(attendees) {
     .then(function(user) {
       if (!user.SlackEmail) {
         noPermission.push(user.SlackId);
+        console.log(noPermission)
       }
     });
   });

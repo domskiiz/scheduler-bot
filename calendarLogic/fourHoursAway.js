@@ -14,4 +14,5 @@ fourHoursAway = function(date, time) {
   return diff > 4;
 }
 
-module.exports = fourDaysAway;
+
+module.exports = fourHoursAway;

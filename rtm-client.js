@@ -18,6 +18,7 @@ var models = require('./models');
 var availableTimeSlot = require('./test');
 var getAttendeeEmails = require('./calendarLogic/attendees');
 var cronjob = require('./cronjob')
+var fourHoursAway = require('./calendarLogic/fourHoursAway');
 
 var allGrantedAccess = require('./calendarLogic/allGrantedAccess');
 let handleNotGranted;
@@ -64,19 +65,17 @@ rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, (rtmStartData) => {
 
 rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     console.log('Pam Spam is authenticated.')
-    // setInterval(cronjob(), 1000)
-    var tasksArray = cronjob();
-    console.log(tasksArray);
-    tasksArray.then((taskArray) => {
-        taskArray.forEach((task) => {
-            console.log('POST', task);
-            web.chat.postMessage(task.channelId, `Reminder! You have the task ${task.subject} scheduled for tomorrow. Don't forget!`, {
-                "text": "Scheduler Bot",
-                "username": "PamSpam2",
-            })
-        })
-    })
-})
+
+    // CRON JOB REMINDERS
+    // var tasksArray = cronjob();
+    // tasksArray.then((taskArray) => {
+    //     taskArray.forEach((task) => {
+    //         web.chat.postMessage(task.channelId, `Reminder! You have the task ${task.subject} scheduled for tomorrow. Don't forget!`, {
+    //             "text": "Scheduler Bot",
+    //             "username": "PamSpam2",
+    //         })
+    //     })
+    // })
 
 rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
     if (message.subtype === 'message_changed') {
@@ -99,7 +98,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                 new models.User({
                     SlackId: message.user
                 }).save(function(err, user){
-                    var link = 'https://34efd4e0.ngrok.io ' +'/connect?SlackId='+ SlackId;
+                    var link = 'https://34efd4e0.ngrok.io' +'/connect?SlackId='+ SlackId;
                     web.chat.postMessage(message.channel, 'Signup: ' + link, {
                         "text": '',
                         "username": "PamSpam2",
@@ -111,7 +110,6 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
 
     if(!complete && message.subtype !== "bot_message"){
         var array = message.text.split(' ');
-        console.log(array);
         array.forEach(function(item, index){
             if(item[0]==='<'){
                 var unfiltered = item.split('').splice(2);
@@ -166,24 +164,69 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                         confirmText = "Should we schedule your todo " + todo + " for " + date + " ?";
                     } else if (result.metadata.intentId === scheduleIntentId) {
                         var available = availableTimeSlot(attendees, new Date(date+'T'+time));
-                        console.log('available', available);
-                        attendeeEmailsPromise = Promise.all(attendees.map((eachAttendee) => {
-                            return getAttendeeEmails(eachAttendee)
-                        }))
-                        .then((emails) => {
-                            attendeeEmails = emails;
+                        available
+                        .then((times) => {
+                            var optionsArray = [];
+                            times.forEach((timeslot) => {
+                                optionsArray.push({ "text": `${timeslot}`, "value": `${timeslot}`})
+                            })
+                            console.log('optionsArray', optionsArray);
+                            return optionsArray;
+                        })
+                        .then((optionsArray) => {
+                            web.chat.postMessage(message.channel, "The time you sent conflicts with others' schedules.", {
+                                "text": "The time you sent conflicts with others' schedules.",
+                                "username": "PamSpam2",
+                                "response_type": "in_channel",
+                                "field": {
+                                    "todo": todo,
+                                    "invitees": attendees,
+                                    "requesterId": user._id,
+                                },
+                                "attachments": [
+                                    {
+                                        "text": "Choose a better time below:",
+                                        "fallback": "If you could read this message, you'd be choosing something fun to do right now.",
+                                        "color": "#3AA3E3",
+                                        "attachment_type": "default",
+                                        "callback_id": "choose_times",
+                                        "actions": [
+                                            {
+                                                "name": "times_list",
+                                                "text": "Pick a time.",
+                                                "type": "select",
+                                                "options": optionsArray
+                                            }
+                                        ]
+                                    }
+                                ]
+                            })
+                        })
+                        // attendeeEmailsPromise = Promise.all(attendees.map((eachAttendee) => {
+                        //     return getAttendeeEmails(eachAttendee)
+                        // }))
+                        // .then((emails) => {
+                        //     attendeeEmails = emails;
+                        // })
+                        attendees.forEach(function(attendee) {
+                            models.User.findOne({
+                                SlackId: attendee,
+                            })
+                            .then((user) => {
+                                attendeeEmails.push({'email': user.SlackEmail})
+                            })
+
                         })
 
-                        // console.log("available", available);
-                        // console.log("attendees", attendees);
                         confirmText = "Should we schedule your todo " + todo + " on " + time + " for " + date + " ?";
                     }
+
                     web.chat.postMessage(message.channel, "Confirmation", {
                         "text": "Are you sure about your choice?",
                         "username": "PamSpam2",
                         "attachments": [{
                             "text": confirmText,
-                            "callback_id": "confirmation",
+                            "callback_id": "confirmation", // hacky
                             "color": "#3AA3E3",
                             "attachment_type": "default",
                             "actions": [
@@ -235,29 +278,66 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
 rtm.start();
 
 app.post('/interactive', (req, res) => {
+    var noPermission = [];
     var payload = JSON.parse(req.body.payload)
     complete = false;
     notPressed = false;
-    if (payload.actions[0].value === "confirm") {
-        var confirmation = '';
-        if (allDayTask) {
-            saveTodo(todo, date);
-            confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' has been added to your calendar!'
-        } else {
-            // check that all have enabled gcal access
-            var noPermission = allGrantedAccess(attendees);
-            if (noPermission.length > 0) {
-              res.send("Not all attendees have granted access yet.");
-              handleNotGranted = true;
+    if (payload.actions.name === "confirmation") {
+        if (payload.actions[0].value === "confirm") {
+            var confirmation = '';
+            if (allDayTask) {
+                saveTodo(todo, date);
+                confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' has been added to your calendar!'
             } else {
-              saveMeeting(todo, date, time, attendeeEmails);
-              confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' for ' + time + ' has been added to your calendar!'
+                // check that all have enabled gcal access
+                console.log(attendees, 'attendees about to be checked')
+                attendees.forEach(function(person) {
+                  models.User.findOne({
+                    SlackId: person
+                  })
+                  .then(function(user) {
+                    if (!user.SlackEmail) {
+                      noPermission.push(user.SlackId);
+                    }
+                  })
+                  .catch(function(err) {
+                      console.log(err);
+                      noPermission.push(err)
+                  })
+                });
+                if (noPermission.length > 0) {
+                    if (!fourHoursAway(date, time)) {
+                        res.send("Meeting is too soon! Please make sure all have granted access or choose a later time.");
+                    } else {
+                        res.send("Not all attendees have granted access yet.");
+                        handleNotGranted = true;
+                    }
+                } else {
+                  saveMeeting(todo, date, time, attendeeEmails);
+                  confirmation = "Confirmed, your " + todo+ ' task on ' + date + ' for ' + time + ' has been added to your calendar!'
+                }
             }
+            res.send(confirmation)
+        } else if (payload.actions[0].value === "cancel") {
+            res.send("Sure. Scheduling cancelled.")
         }
-        res.send(confirmation)
-    } else if (payload.actions[0].value === "cancel") {
-        res.send("Sure. Scheduling cancelled.")
+    } else if (payload.actions.name === "times_list") {
+        console.log("PAYLOAD!", payload);
+        console.log("SELECTED!", payload.actions[0].selected_options);
+        // var = payload.callback_id
+
+        // new models.Meeting({
+        //     subject: todo,
+        //     day: date,
+        //     time: time,
+        //     invitees: attendees,
+        //     requesterId: user._id,
+        // }).save(function(err, task){
+        //     console.log('meeting saves it here')
+        //     updateAccessTokens(user);
+        // })
     }
+
 });
 
 app.listen(8080, function() {
