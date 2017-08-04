@@ -53,7 +53,7 @@ function returnAvailableSlots(attendees, time) {
 	// var message = messageText;
 	var time = time; //must set ==> Date object
 	var ids = attendees;
-	var availableTimeSlot = [];
+	var availableTimeSlot = {'times':[], 'check':false};
 	return new Promise(function(resolve, reject){
 	models.User.find({
 		SlackId: { $in: ids}
@@ -65,26 +65,39 @@ function returnAvailableSlots(attendees, time) {
 	})
 	.then(function(allevents){
 		var conflicts = false;
-		while(availableTimeSlot.length <= 10){
-            console.log(availableTimeSlot.length);
-            console.log(time);
-			if(CheckConflicts(allevents, time)){
-				time = new Date(time.setMinutes(time.getMinutes() + 30));
+		var time2 = new Date(time);
+		while(availableTimeSlot.times.length < 10){
+            console.log('in')
+			if(CheckConflicts(allevents, time2)){
+				var time2 = new Date(time.setMinutes(time.getMinutes() + 30));
 			}else{
-				if(availableTimeSlot.length%3 === 0 && availableTimeSlot.length !== 0){
-                    time = new Date(time.setDate(time.getDate() + 1));
-                    if(CheckConflicts(allevents, time)){
-                        time = new Date(time.setMinutes(time.getMinutes() + 30));
-                    }else{
-                        availableTimeSlot.push(time);
-                    }
+				if(availableTimeSlot.times.length%3 === 0 && availableTimeSlot.times.length !== 0 && availableTimeSlot.check===false){
+					availableTimeSlot.check=true;
+                    var time2 = new Date(time.setDate(time.getDate() + 1));
+
 				}else{
-					availableTimeSlot.push(time);
+					availableTimeSlot.times.push(time2);
+					availableTimeSlot.check = false;
 				}
 			}
 		}
+		var return_index = 0; 
+		var return_array = [];
+		for(var x=0; x<availableTimeSlot.times.length; x++){
+			if(availableTimeSlot.times[x] ===availableTimeSlot.times[x+1] ){
+				return_index = x + 1;
+				break;
+			}
+		}
+		console.log(return_index);
+		availableTimeSlot.times.splice(return_index);
         //
-		resolve(availableTimeSlot);
+        console.log(availableTimeSlot.times);
+        if(availableTimeSlot.times){
+        	resolve([]);
+        }else{
+        	resolve(availableTimeSlot.times);
+        }
 	});
 	})
 
@@ -145,4 +158,8 @@ function addEventList(user) {
 
 	})
 }
+
+// returnAvailableSlots(['U6FBRUN2U','U6FGCL7K3'], new Date()).then((times) => {
+// 	console.log('return array',times)
+// })
 module.exports = returnAvailableSlots;
