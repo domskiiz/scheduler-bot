@@ -34,6 +34,7 @@ let date = '';
 let time = '';
 person = [];
 let attendeeEmails = [];
+let attendees = [];
 
 const remindIntentId = '59efd0cc-6ec7-4539-b05b-86626f6cfe2a';
 const scheduleIntentId = '2fac8e45-db14-496c-a23d-4f2f14b1d876';
@@ -58,10 +59,20 @@ rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, (rtmStartData) => {
 
 rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     console.log('Pam Spam is authenticated.')
-    // cronjob()
+    // setInterval(cronjob(), 1000)
+    var tasksArray = cronjob();
+    tasksArray.forEach((task) => {
+        web.chat.postMessage(task.channelId, `Reminder! You have the task ${task.subject} scheduled for tomorrow. Don't forget!`, {
+            "text": "Scheduler Bot",
+            "username": "PamSpam2",
+        })
+    })
 })
 
 rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
+    if (message.subtype === 'message_changed') {
+        var message = message.message;
+    }
     if (notPressed && message.subtype !== "bot_message") {
         web.chat.postMessage(message.channel, "Please confirm before proceeding.", {
             "text": "Scheduler Bot",
@@ -79,7 +90,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                 new models.User({
                     SlackId: message.user
                 }).save(function(err, user){
-                    var link = 'https://597a56cd.ngrok.io' +'/connect?SlackId='+ SlackId;
+                    var link = 'https://34efd4e0.ngrok.io ' +'/connect?SlackId='+ SlackId;
                     web.chat.postMessage(message.channel, 'Signup: ' + link, {
                         "text": '',
                         "username": "PamSpam2",
@@ -90,7 +101,6 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
     }
 
     if(!complete && message.subtype !== "bot_message"){
-        console.log(message.text);
         var array = message.text.split(' ');
         console.log(array);
         array.forEach(function(item, index){
@@ -119,7 +129,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
         })
         .then((response) => {
             var result = response.data.result
-            console.log(result);
+            console.log('result', result);
             if (Object.keys(result.parameters).length === 0 && !result.actionIncomplete && (message.text.split(' ')[0].toUpperCase() !== 'REMIND' || message.text.split(' ')[0].toUpperCase() !== 'SCHEDULE' )) {
                 web.chat.postMessage(message.channel, result.fulfillment.speech, {
                     "text": "Scheduler Bot",
@@ -140,7 +150,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                     attendees = result.parameters.person;
                 }
                 complete = true;
-                models.User.find({
+                models.User.findOne({
                     SlackId: message.user
                 })
                 .then(function(user){
@@ -149,10 +159,17 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                     if (result.metadata.intentId === remindIntentId) {
                         confirmText = "Should we schedule your todo " + todo + " for " + date + " ?";
                     } else if (result.metadata.intentId === scheduleIntentId) {
-                        var available = availableTimeSlot(attendees);
-                        attendeeEmails = getAttendeeEmails(attendees);
-                        console.log("available", available);
-                        console.log("attendees", attendees);
+                        // var available = availableTimeSlot(attendees);
+                        console.log('list of attendees', attendees);
+                        attendeeEmailsPromise = Promise.all(attendees.map((eachAttendee) => {
+                            return getAttendeeEmails(eachAttendee)
+                        }))
+                        .then((emails) => {
+                            attendeeEmails = emails;
+                        })
+
+                        // console.log("available", available);
+                        // console.log("attendees", attendees);
                         confirmText = "Should we schedule your todo " + todo + " on " + time + " for " + date + " ?";
                     }
                     web.chat.postMessage(message.channel, "Confirmation", {
@@ -186,6 +203,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                             subject: todo,
                             day: date,
                             requesterId: user._id,
+                            channelId: message.channel
                         }).save(function(err, task){
                             updateAccessTokens(user);
                         })
@@ -195,7 +213,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                             subject: todo,
                             day: date,
                             time: time,
-                            invitees: attendeeEmails,
+                            invitees: attendees,
                             requesterId: user._id,
                         }).save(function(err, task){
                             console.log('meeting saves it here')
@@ -239,7 +257,6 @@ app.post('/interactive', (req, res) => {
 app.listen(8080, function() {
     console.log('PamSpam2 listening on port 8080.');
 });
-
 
 module.exports = {
     rtm: rtm,

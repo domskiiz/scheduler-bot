@@ -91,19 +91,15 @@ function addEventList(user) {
 				refresh_token:  user.GoogleRefreshToken,
 			}
 		);
-		console.log('innnnn');
 		oauth2Client.refreshAccessToken(function(err, tokens) {
 			if (err) {
 				reject('refresh failed');
 				return;
 			}
-
-			console.log('tokens', tokens);
 			oauth2Client.setCredentials({
 				access_token: tokens.access_token,
 				refresh_token: tokens.refresh_token,
 			});
-			console.log(oauth2Client);
 			calendar.events.list({
 				auth: oauth2Client,
 				calendarId: 'primary',
@@ -112,7 +108,6 @@ function addEventList(user) {
 				singleEvents: true,
 				orderBy: 'startTime'
 			}, function(err, response) {
-				console.log('inside callback');
 				if (err) {
 					console.log('The API returned an error: ' + err);
 					reject('The API returned an error: ' + err);
@@ -124,14 +119,9 @@ function addEventList(user) {
 					reject('no upcoming events found')
 				} else {
 					resolve(events);
-					// for (var i = 0; i < events.length; i++) {
-					//   var event = events[i];
-					//   var start = event.start.dateTime || event.start.date;
-					// }
 				}
 			});
 		});
-
 	})
 }
 

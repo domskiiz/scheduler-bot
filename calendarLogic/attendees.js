@@ -1,17 +1,20 @@
 var models = require('../models');
 
-getAttendeeEmails = function(slackAttendees) {
-  var attendeeEmails = [];
-  slackAttendees.forEach(function(slackId) {
-    models.User.findOne({
-      SlackId: slackId
+getAttendeeEmails = function(attendee) {
+    console.log("attendee in function", attendee);
+    return new Promise((resolve, reject) => {
+          models.User.findOne({
+            SlackId: attendee
+          })
+          .then(function(user) {
+              resolve(user.SlackEmail)
+          })
+          .catch(function(err) {
+              reject(err)
+          })
     })
-    .then(function(user) {
-      attendeeEmails.push(user.SlackEmail);
-    });
-  });
-
-  return attendeeEmails;
 }
+
+
 
 module.exports = getAttendeeEmails;

@@ -42,9 +42,12 @@ var Taskschema = schema({
     calendar_eventId: {
         type: String
     },
+    channelId: {
+        type: String
+    },
 	requesterId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: User,
+        ref: 'User',
 	}
 })
 
@@ -59,7 +62,7 @@ var Meetingschema = schema({
     },
     // invitees:{
     //     type: mongoose.Schema.Types.ObjectId,
-    //     ref: User
+    //     ref: 'User'
     // },
     subject:{
         type: String

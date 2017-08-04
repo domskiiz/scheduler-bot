@@ -4,9 +4,8 @@ var Task = require('./models').Task;
 // Look for all reminders and filter only those that will happen tomorrow.
 function cronJob() {
     Task.find()
-    .populate('_id')
+    .populate('requesterId')
     .exec((err, allTasks) => {
-        console.log(allTasks);
         var filteredTasks = [];
         allTasks.forEach((task) => {
             var taskDate = new Date(task.day);
@@ -18,11 +17,6 @@ function cronJob() {
         })
         return filteredTasks
     })
-    // .then((filteredTasks) => {
-    //     filteredTasks.forEach((task) => {
-    //
-    //     })
-    // })
 }
 
 function helperDates() {
@@ -42,24 +36,5 @@ function addZero(num) {
 }
 
 // Get the slack IDs of the specific users and send an RTM client message to the specified user.
-
-
-// var Taskschema = schema({
-// 	subject: {
-//         type: String,
-//         required: true
-//     },
-//     day: {
-//         type: String,
-//         required: true
-//     },
-//     calendar_eventId: {
-//         type: String
-//     },
-// 	requesterId: {
-//         type: mongoose.Schema.Types.ObjectId,
-//         ref: User,
-// 	}
-// })
 
 module.exports = cronJob;
