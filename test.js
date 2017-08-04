@@ -161,5 +161,5 @@ function addEventList(user) {
 
 // returnAvailableSlots(['U6FBRUN2U','U6FGCL7K3'], new Date()).then((times) => {
 // 	console.log('return array',times)
-// });
+// });;;
 module.exports = returnAvailableSlots;
