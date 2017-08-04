@@ -3,20 +3,39 @@ var Task = require('./models').Task;
 
 // Look for all reminders and filter only those that will happen tomorrow.
 function cronJob() {
-    Task.find()
+    var allTasks;
+    return Task.find()
     .populate('requesterId')
     .exec((err, allTasks) => {
-        var filteredTasks = [];
-        allTasks.forEach((task) => {
+        return allTasks
+
+    })
+    .then((allTasks) => {
+        return returnTasks(allTasks)
+        .then((filteredTasks) => {
+            allTasks = filteredTasks;
+            return allTasks;
+        })
+    })
+    .then((tasks) => {
+        // console.log('tasks!!!!', tasks);
+        // console.log('type!!!', typeof tasks);
+        return tasks;
+    })
+};
+
+function returnTasks(allTasks) {
+    return new Promise(function(resolve, reject) {
+        var newAllTasks = allTasks.filter(function(task) {
             var taskDate = new Date(task.day);
             var taskMinusOneDate = new Date(taskDate.setDate(taskDate.getDate() - 1)).toString();
             var currentDate = new Date(helperDates()).toString();
             if (taskMinusOneDate === currentDate) {
-                filteredTasks.push(task)
+                return task
             }
         })
-        return filteredTasks
-    })
+        resolve(newAllTasks)
+    });
 }
 
 function helperDates() {

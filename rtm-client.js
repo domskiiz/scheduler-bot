@@ -15,7 +15,7 @@ var app = express();
 var request = require('request');
 var models = require('./models');
 
-var availableTimeSlot = require('./calendarLogic/timeconflict');
+var availableTimeSlot = require('./test');
 var getAttendeeEmails = require('./calendarLogic/attendees');
 var cronjob = require('./cronjob')
 
@@ -55,16 +55,25 @@ rtm.on(CLIENT_EVENTS.RTM.AUTHENTICATED, (rtmStartData) => {
     for (const c of rtmStartData.channels) {
         if (c.is_member && c.name === 'pamspam2_channel') { channel = c.id }
     }
+    // console.log(rtmStartData);
 });
+
+// D6G0UqQU75
+// D6G0UQU75 U6FGCL7K3
+// D6FGPR37T U6FCUJUUQ
 
 rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     console.log('Pam Spam is authenticated.')
     // setInterval(cronjob(), 1000)
     var tasksArray = cronjob();
-    tasksArray.forEach((task) => {
-        web.chat.postMessage(task.channelId, `Reminder! You have the task ${task.subject} scheduled for tomorrow. Don't forget!`, {
-            "text": "Scheduler Bot",
-            "username": "PamSpam2",
+    console.log(tasksArray);
+    tasksArray.then((taskArray) => {
+        taskArray.forEach((task) => {
+            console.log('POST', task);
+            web.chat.postMessage(task.channelId, `Reminder! You have the task ${task.subject} scheduled for tomorrow. Don't forget!`, {
+                "text": "Scheduler Bot",
+                "username": "PamSpam2",
+            })
         })
     })
 })
@@ -112,8 +121,6 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
             };
         })
         var text = array.join(' ');
-        console.log('array', array);
-        console.log('text', text);
         axios({
             method: 'post',
             url: 'https://api.api.ai/v1/query?v=20150910',
@@ -129,7 +136,6 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
         })
         .then((response) => {
             var result = response.data.result
-            console.log('result', result);
             if (Object.keys(result.parameters).length === 0 && !result.actionIncomplete && (message.text.split(' ')[0].toUpperCase() !== 'REMIND' || message.text.split(' ')[0].toUpperCase() !== 'SCHEDULE' )) {
                 web.chat.postMessage(message.channel, result.fulfillment.speech, {
                     "text": "Scheduler Bot",
@@ -159,8 +165,8 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                     if (result.metadata.intentId === remindIntentId) {
                         confirmText = "Should we schedule your todo " + todo + " for " + date + " ?";
                     } else if (result.metadata.intentId === scheduleIntentId) {
-                        // var available = availableTimeSlot(attendees);
-                        console.log('list of attendees', attendees);
+                        var available = availableTimeSlot(attendees, new Date(date+'T'+time));
+                        console.log('available', available);
                         attendeeEmailsPromise = Promise.all(attendees.map((eachAttendee) => {
                             return getAttendeeEmails(eachAttendee)
                         }))
