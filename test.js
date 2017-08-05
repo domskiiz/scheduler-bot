@@ -5,7 +5,6 @@ var OAuth2 = google.auth.OAuth2;
 var oauthRoute = require('./oauthRoute');
 
 
-
 var models = require('./models');
 
 // function ManipulateIds(attendees){
@@ -25,9 +24,14 @@ var models = require('./models');
 // }
 
 function CheckConflicts(events, time) {
-    var check  = false;
-	events.map(function(item) {
-		if (new Date(item[0].start.dateTime) < time && time < new Date(item[0].end.dateTime)) {
+	var check  = false;
+	events[0].map(function(item) {
+		var time_start = new Date(item.start.dateTime);
+		var time2 = new Date(time_start.setHours(time_start.getHours() - 7));
+		var time_end = new Date(item.end.dateTime);
+		var time3 = new Date(time_end.setHours(time_end.getHours() - 7))
+	
+		if (time2<= time && time <= time3) {
 			check = true;
 		}
 	})
@@ -65,9 +69,9 @@ function returnAvailableSlots(attendees, time) {
 	})
 	.then(function(allevents){
 		var conflicts = false;
-		var time2 = new Date(time);
+		var time2 = new Date(time)
 		while(availableTimeSlot.times.length < 10){
-            console.log('in')
+			console.log(availableTimeSlot.times)
 			if(CheckConflicts(allevents, time2)){
 				var time2 = new Date(time.setMinutes(time.getMinutes() + 30));
 
@@ -82,22 +86,22 @@ function returnAvailableSlots(attendees, time) {
 				}
 			}
 		}
-		var return_index = 0; 
-		var return_array = [];
-		for(var x=0; x<availableTimeSlot.times.length; x++){
-			if(availableTimeSlot.times[x] ===availableTimeSlot.times[x+1] ){
-				return_index = x + 1;
-				break;
-			}
-		}
-		console.log(return_index);
-		availableTimeSlot.times.splice(return_index);
-        //
-        console.log(availableTimeSlot.times);
-        if(availableTimeSlot.times){
+		console.log('ava',availableTimeSlot);
+		// var return_array = [];
+
+		// console.log(return_index);
+		// availableTimeSlot.times.splice(return_index);
+		//
+        if(availableTimeSlot.times[0] === time){
         	resolve([]);
         }else{
-        	resolve(availableTimeSlot.times);
+
+		var arr = availableTimeSlot.times
+			arr = arr.filter( function( item, index, inputArray ) {
+				return inputArray.indexOf(item) == index;
+			});
+			console.log(arr);
+        	resolve(arr);
         }
 	});
 	})
@@ -157,7 +161,4 @@ function addEventList(user) {
 	})
 }
 
-// returnAvailableSlots(['U6FBRUN2U','U6FGCL7K3'], new Date()).then((times) => {
-// 	console.log('return array',times)
-// });;;
 module.exports = returnAvailableSlots;

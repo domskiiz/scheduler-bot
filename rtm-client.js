@@ -76,6 +76,8 @@ rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     //         })
     //     })
     // })
+>>>>>>> 3fda20a052cc3048c9620e2db0816c7be4e85f37
+})
 
 rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
     if (message.subtype === 'message_changed') {
@@ -164,6 +166,14 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                         confirmText = "Should we schedule your todo " + todo + " for " + date + " ?";
                     } else if (result.metadata.intentId === scheduleIntentId) {
                         var available = availableTimeSlot(attendees, new Date(date+'T'+time));
+<<<<<<< HEAD
+                        console.log('available', available);
+                        attendeeEmailsPromise = Promise.all(attendees.map((eachAttendee) => {
+                            return getAttendeeEmails(eachAttendee)
+                        }))
+                        .then((emails) => {
+                            attendeeEmails = emails;
+=======
                         available
                         .then((times) => {
                             var optionsArray = [];
@@ -215,7 +225,7 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                             .then((user) => {
                                 attendeeEmails.push({'email': user.SlackEmail})
                             })
-
+>>>>>>> 3fda20a052cc3048c9620e2db0816c7be4e85f37
                         })
 
                         confirmText = "Should we schedule your todo " + todo + " on " + time + " for " + date + " ?";
