@@ -76,7 +76,7 @@ rtm.on(CLIENT_EVENTS.RTM.RTM_CONNECTION_OPENED, function() {
     //         })
     //     })
     // })
->>>>>>> 3fda20a052cc3048c9620e2db0816c7be4e85f37
+
 })
 
 rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
@@ -166,21 +166,14 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                         confirmText = "Should we schedule your todo " + todo + " for " + date + " ?";
                     } else if (result.metadata.intentId === scheduleIntentId) {
                         var available = availableTimeSlot(attendees, new Date(date+'T'+time));
-<<<<<<< HEAD
-                        console.log('available', available);
-                        attendeeEmailsPromise = Promise.all(attendees.map((eachAttendee) => {
-                            return getAttendeeEmails(eachAttendee)
-                        }))
-                        .then((emails) => {
-                            attendeeEmails = emails;
-=======
-                        available
-                        .then((times) => {
+
+                        available.then((times) => {
                             var optionsArray = [];
                             times.forEach((timeslot) => {
                                 optionsArray.push({ "text": `${timeslot}`, "value": `${timeslot}`})
                             })
-                            console.log('optionsArray', optionsArray);
+                            // TEMPORARY!!!
+                            optionsArray = [{ "text": new Date(date+'T'+time).toString(), "value": new Date(date+'T'+time).toString()}]
                             return optionsArray;
                         })
                         .then((optionsArray) => {
@@ -188,18 +181,13 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                                 "text": "The time you sent conflicts with others' schedules.",
                                 "username": "PamSpam2",
                                 "response_type": "in_channel",
-                                "field": {
-                                    "todo": todo,
-                                    "invitees": attendees,
-                                    "requesterId": user._id,
-                                },
                                 "attachments": [
                                     {
                                         "text": "Choose a better time below:",
                                         "fallback": "If you could read this message, you'd be choosing something fun to do right now.",
                                         "color": "#3AA3E3",
                                         "attachment_type": "default",
-                                        "callback_id": "choose_times",
+                                        "callback_id": `{"todo": "${todo}", "date": "${date}", "time": "${time}", "attendees": "[${attendees}]", "requesterId": "${user._id}"}`,
                                         "actions": [
                                             {
                                                 "name": "times_list",
@@ -212,12 +200,6 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                                 ]
                             })
                         })
-                        // attendeeEmailsPromise = Promise.all(attendees.map((eachAttendee) => {
-                        //     return getAttendeeEmails(eachAttendee)
-                        // }))
-                        // .then((emails) => {
-                        //     attendeeEmails = emails;
-                        // })
                         attendees.forEach(function(attendee) {
                             models.User.findOne({
                                 SlackId: attendee,
@@ -225,37 +207,35 @@ rtm.on(RTM_EVENTS.MESSAGE, function handleRtmMessage(message) {
                             .then((user) => {
                                 attendeeEmails.push({'email': user.SlackEmail})
                             })
->>>>>>> 3fda20a052cc3048c9620e2db0816c7be4e85f37
                         })
-
                         confirmText = "Should we schedule your todo " + todo + " on " + time + " for " + date + " ?";
                     }
+                    // web.chat.postMessage(message.channel, "Confirmation", {
+                    //     "text": "Are you sure about your choice?",
+                    //     "username": "PamSpam2",
+                    //     "attachments": [{
+                    //         "text": confirmText,
+                    //         "callback_id": "confirmation", // hacky
+                    //         "color": "#3AA3E3",
+                    //         "attachment_type": "default",
+                    //         "actions": [
+                    //             {
+                    //                 "name": "confirmation",
+                    //                 "text": "Yes, confirm!",
+                    //                 "type": "button",
+                    //                 "value": "confirm"
+                    //             },
+                    //             {
+                    //                 "name": "confirmation",
+                    //                 "text": "Cancel",
+                    //                 "style": "danger",
+                    //                 "type": "button",
+                    //                 "value": "cancel"
+                    //             }
+                    //         ]
+                    //     }]
+                    // })
 
-                    web.chat.postMessage(message.channel, "Confirmation", {
-                        "text": "Are you sure about your choice?",
-                        "username": "PamSpam2",
-                        "attachments": [{
-                            "text": confirmText,
-                            "callback_id": "confirmation", // hacky
-                            "color": "#3AA3E3",
-                            "attachment_type": "default",
-                            "actions": [
-                                {
-                                    "name": "confirmation",
-                                    "text": "Yes, confirm!",
-                                    "type": "button",
-                                    "value": "confirm"
-                                },
-                                {
-                                    "name": "confirmation",
-                                    "text": "Cancel",
-                                    "style": "danger",
-                                    "type": "button",
-                                    "value": "cancel"
-                                }
-                            ]
-                        }]
-                    })
                     if (result.metadata.intentId === remindIntentId) {
                         allDayTask = true;
                         new models.Task({
@@ -292,7 +272,7 @@ app.post('/interactive', (req, res) => {
     var payload = JSON.parse(req.body.payload)
     complete = false;
     notPressed = false;
-    if (payload.actions.name === "confirmation") {
+    if (payload.actions[0].name === "confirmation") {
         if (payload.actions[0].value === "confirm") {
             var confirmation = '';
             if (allDayTask) {
@@ -331,23 +311,56 @@ app.post('/interactive', (req, res) => {
         } else if (payload.actions[0].value === "cancel") {
             res.send("Sure. Scheduling cancelled.")
         }
-    } else if (payload.actions.name === "times_list") {
+    } else if (payload.actions[0].name === "times_list") {
         console.log("PAYLOAD!", payload);
         console.log("SELECTED!", payload.actions[0].selected_options);
-        // var = payload.callback_id
-
-        // new models.Meeting({
-        //     subject: todo,
-        //     day: date,
-        //     time: time,
-        //     invitees: attendees,
-        //     requesterId: user._id,
-        // }).save(function(err, task){
-        //     console.log('meeting saves it here')
-        //     updateAccessTokens(user);
-        // })
+        var info = JSON.parse(payload.callback_id);
+        console.log("INFO", info);
+        console.log("type", typeof info);
+        models.User.findOne({
+            SlackId: payload.user.id
+        })
+        .then(function(user){
+            new models.Meeting({
+                subject: info.todo,
+                day: info.date,
+                time: info.time,
+                invitees: info.attendees,
+                requesterId: info.requesterId,
+            }).save(function(err, task){
+                updateAccessTokens(user);
+            })
+        })
+        .then(function() {
+            var confirmText = "Should we schedule your todo " + info.todo + " on " + info.time + " for " + info.date + " ?";
+            web.chat.postMessage(payload.channel.id, "Confirmation", {
+                "text": "Are you sure about your choice?",
+                "username": "PamSpam2",
+                "attachments": [{
+                    "text": confirmText,
+                    "callback_id": "confirmation", // hacky
+                    "color": "#3AA3E3",
+                    "attachment_type": "default",
+                    "actions": [
+                        {
+                            "name": "confirmation",
+                            "text": "Yes, confirm!",
+                            "type": "button",
+                            "value": "confirm"
+                        },
+                        {
+                            "name": "confirmation",
+                            "text": "Cancel",
+                            "style": "danger",
+                            "type": "button",
+                            "value": "cancel"
+                        }
+                    ]
+                }]
+            })
+            res.send("Cool. We'll schedule it.")
+        })
     }
-
 });
 
 app.listen(8080, function() {
